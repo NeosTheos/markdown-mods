@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>数学排版编辑器</title>
+<style>
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; font: 14px system-ui, sans-serif; background: #eef0f3; }
+#bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #fff; border-bottom: 1px solid #ddd; }
+#bar button { padding: 6px 14px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
+#bar button:hover { border-color: #2f6b3b; color: #2f6b3b; }
+#msg { color: #2f7d3a; }
+main { flex: 1; display: flex; min-height: 0; }
+#src { flex: 1; padding: 16px; border: 0; resize: none; outline: none; font: 14px/1.7 ui-monospace, Consolas, monospace; }
+#pane { flex: 1; overflow: auto; padding: 24px; }
+#view { width: 375px; margin: 0 auto; padding: 20px 16px; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, .08); }
+</style>
+
+<!-- 主题：与 wechat-math.css 相同。media="not all" 只解析不生效，复制前逐条写进 style 属性 -->
+<style id="theme" media="not all">
+p, li {
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", STSong, SimSun, serif;
+  font-size: 16px;
+  line-height: 1.9;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+h2 {
+  display: block;
+  margin: 2.4em 0 1.4em;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", STSong, SimSun, serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #1f1f1f;
+}
+h2 em {
+  margin-right: 0.45em;
+  font-style: normal;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  color: #3557a1;
+}
+blockquote.markdown-alert {
+  margin: 2.2em 0;
+  padding: 1px 20px 16px;
+  border: 0;
+  border-left: 3px solid #4b5068;
+  border-radius: 8px;
+  background-color: #f6f6f9;
+  background-image:
+    linear-gradient(to bottom right, #f6f6f9 30%, rgba(246, 246, 249, 0) 100%),
+    linear-gradient(rgba(75, 80, 104, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 80, 104, 0.11) 1px, transparent 1px);
+  background-size: 100% 100%, 12px 12px, 12px 12px;
+}
+.markdown-alert > :not(.markdown-alert-title) {
+  font-style: normal;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+.markdown-alert .markdown-alert-title {
+  display: table;
+  margin: -13px 0 14px -23px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  background: #e4e5eb;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  color: #5b6072;
+}
+blockquote.markdown-alert-definition,
+blockquote.markdown-alert-axiom {
+  border-left-color: #2f6b3b;
+  background-color: #f2f7f1;
+  background-image:
+    linear-gradient(to bottom right, #f2f7f1 30%, rgba(242, 247, 241, 0) 100%),
+    linear-gradient(rgba(47, 107, 59, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 107, 59, 0.11) 1px, transparent 1px);
+}
+.markdown-alert-definition .markdown-alert-title,
+.markdown-alert-axiom .markdown-alert-title {
+  background: #dbeada;
+  color: #2f7d3a;
+}
+blockquote.markdown-alert-theorem,
+blockquote.markdown-alert-lemma,
+blockquote.markdown-alert-corollary,
+blockquote.markdown-alert-proposition {
+  border-left-color: #3557a1;
+  background-color: #f1f4fa;
+  background-image:
+    linear-gradient(to bottom right, #f1f4fa 30%, rgba(241, 244, 250, 0) 100%),
+    linear-gradient(rgba(53, 87, 161, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53, 87, 161, 0.11) 1px, transparent 1px);
+}
+.markdown-alert-theorem .markdown-alert-title,
+.markdown-alert-lemma .markdown-alert-title,
+.markdown-alert-corollary .markdown-alert-title,
+.markdown-alert-proposition .markdown-alert-title {
+  background: #dde5f3;
+  color: #3557a1;
+}
+.markup-underline {
+  text-decoration: none;
+  border-bottom: 1px dotted #a8842a;
+  white-space: nowrap;
+  color: #a8842a;
+}
+</style>
+
+<script>window.MathJax = { svg: { fontCache: 'none' }, startup: { typeset: false } }</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+</head>
+<body>
+<div id="bar">
+  <button id="wx">复制到公众号</button>
+  <button id="zh">复制到知乎</button>
+  <span id="msg"></span>
+</div>
+<main>
+  <textarea id="src" spellcheck="false"></textarea>
+  <div id="pane"><div id="view"></div></div>
+</main>
+
+<script>
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// 语法与 md.doocs.org 一致：$..$  $$..$$  :::类型 标题 ... :::  ++引用++
+marked.use({ extensions: [
+  { name: 'mathBlock', level: 'block',
+    start: s => s.match(/^\$\$/m)?.index,
+    tokenizer(s) {
+      const m = /^\$\$([\s\S]+?)\$\$[ \t]*(?:\n|$)/.exec(s)
+      if (m) return { type: 'mathBlock', raw: m[0], text: m[1] }
+    },
+    renderer: t => `<section class="math" data-display="1">${esc(t.text)}</section>` },
+  { name: 'math', level: 'inline',
+    start: s => s.indexOf('$'),
+    tokenizer(s) {
+      const m = /^\$([^$\n]+?)\$/.exec(s)
+      if (m) return { type: 'math', raw: m[0], text: m[1] }
+    },
+    renderer: t => `<span class="math">${esc(t.text)}</span>` },
+  { name: 'ref', level: 'inline',
+    start: s => s.indexOf('++'),
+    tokenizer(s) {
+      const m = /^\+\+([^+\n]+?)\+\+/.exec(s)
+      if (m) return { type: 'ref', raw: m[0], tokens: this.lexer.inlineTokens(m[1]) }
+    },
+    renderer(t) { return `<span class="markup-underline">${this.parser.parseInline(t.tokens)}</span>` } },
+  { name: 'box', level: 'block',
+    start: s => s.match(/^:::/m)?.index,
+    tokenizer(s) {
+      const m = /^:::[ \t]*(\S+)[ \t]*([^\n]*)\n([\s\S]*?)\n:::[ \t]*(?:\n|$)/.exec(s)
+      if (!m) return
+      const t = { type: 'box', raw: m[0], kind: m[1], title: m[2].trim() || m[1], tokens: [] }
+      this.lexer.blockTokens(m[3], t.tokens)
+      return t
+    },
+    renderer(t) {
+      return `<blockquote class="markdown-alert markdown-alert-${esc(t.kind)}"><p class="markdown-alert-title"><strong>${esc(t.title)}</strong></p>${this.parser.parse(t.tokens)}</blockquote>`
+    } },
+]})
+
+// 公式转 SVG，处理方式照搬 doocs，公众号能正常显示
+function svg(tex, display) {
+  MathJax.texReset()
+  const el = MathJax.tex2svg(tex, { display }).firstElementChild
+  el.style.width = el.getAttribute('width')
+  el.removeAttribute('width')
+  el.style.display = 'initial'
+  el.style.setProperty('max-width', '300vw', 'important')
+  el.querySelector('g')?.setAttribute('fill', 'currentColor')
+  return el.outerHTML
+}
+
+const rules = [...document.getElementById('theme').sheet.cssRules]
+const src = document.getElementById('src'), view = document.getElementById('view')
+
+function render() {
+  view.innerHTML = marked.parse(src.value)
+  view.querySelectorAll('.math').forEach(m => {
+    m.outerHTML = m.dataset.display
+      ? `<section style="margin:1em 0;text-align:center;overflow-x:auto">${svg(m.textContent, true)}</section>`
+      : `<span>${svg(m.textContent, false)}</span>`
+  })
+  // 按源码顺序写进 style 属性，后写的覆盖先写的
+  for (const r of rules) view.querySelectorAll(r.selectorText).forEach(el => { el.style.cssText += r.style.cssText })
+}
+
+// 知乎会过滤所有样式，只保留结构；公式换成知乎自己的公式图片，行间公式末尾加 \\
+function zhihu() {
+  const body = document.implementation.createHTMLDocument('').body
+  body.innerHTML = marked.parse(src.value)
+  body.querySelectorAll('.math').forEach(m => {
+    const tex = m.textContent.trim() + (m.dataset.display ? '\\\\' : '')
+    const img = body.ownerDocument.createElement('img')
+    img.setAttribute('eeimg', '1')
+    img.setAttribute('src', 'https://www.zhihu.com/equation?tex=' + encodeURIComponent(tex))
+    img.setAttribute('alt', tex)
+    if (m.dataset.display) { const p = body.ownerDocument.createElement('p'); p.append(img); m.replaceWith(p) }
+    else m.replaceWith(img)
+  })
+  body.querySelectorAll('h2 em').forEach(e => e.replaceWith(e.textContent))
+  return body.innerHTML
+}
+
+function copy(html, label) {
+  document.addEventListener('copy', e => {
+    e.clipboardData.setData('text/html', html)
+    e.clipboardData.setData('text/plain', src.value)
+    e.preventDefault()
+  }, { once: true })
+  document.execCommand('copy')
+  const msg = document.getElementById('msg')
+  msg.textContent = `已复制，去${label}编辑器粘贴`
+  setTimeout(() => msg.textContent = '', 3000)
+}
+
+document.getElementById('wx').onclick = () => copy(view.innerHTML, '公众号')
+document.getElementById('zh').onclick = () => copy(zhihu(), '知乎')
+
+let timer
+src.oninput = () => {
+  clearTimeout(timer)
+  timer = setTimeout(render, 200)
+  try { localStorage.setItem('draft', src.value) } catch {}
+}
+
+try { src.value = localStorage.getItem('draft') || '' } catch {}
+src.value ||= `## *1.1* 代数与比较函子
+
+:::definition 定义 1.1
+$T$-代数是一个二元组 $(X,x)$，其中 $x\\colon TX\\to X$ 满足 $x\\circ\\eta_X=1_X$.
+:::
+
+$$
+\\mu\\circ T\\mu=\\mu\\circ\\mu T
+$$
+
+:::remark 评注 1.2
+其余类型（proof、example……）都是灰色卡片. 交叉引用写成 ++定理 2.2++.
+:::
+`
+MathJax.startup.promise.then(render)
+</script>
+</body>
+</html>

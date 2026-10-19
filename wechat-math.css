@@ -1,0 +1,121 @@
+/*
+ * 数学公众号模板，用于 md.doocs.org 的「自定义 CSS」
+ * 写法：
+ *   ## *1.1* 代数与比较函子
+ *   :::definition 定义 1.1      绿色
+ *   :::theorem 定理 2.2         蓝色（lemma / corollary / proposition 同色）
+ *   :::remark 评注 1.2          灰色（其余类型都用灰色）
+ *   ++定理 2.2++               交叉引用（金色虚线）
+ */
+
+/* 正文 */
+p, li {
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", STSong, SimSun, serif;
+  font-size: 16px;
+  line-height: 1.9;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+
+/* 小节标题 */
+h2 {
+  display: block;
+  margin: 2.4em 0 1.4em;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", STSong, SimSun, serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #1f1f1f;
+}
+h2 em {
+  margin-right: 0.45em;
+  font-style: normal;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  color: #3557a1;
+}
+
+/* 卡片：灰色为默认，右下角渐隐网格 */
+blockquote.markdown-alert {
+  margin: 2.2em 0;
+  padding: 1px 20px 16px;
+  border: 0;
+  border-left: 3px solid #4b5068;
+  border-radius: 8px;
+  background-color: #f6f6f9;
+  background-image:
+    linear-gradient(to bottom right, #f6f6f9 30%, rgba(246, 246, 249, 0) 100%),
+    linear-gradient(rgba(75, 80, 104, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 80, 104, 0.11) 1px, transparent 1px);
+  background-size: 100% 100%, 12px 12px, 12px 12px;
+}
+.markdown-alert > :not(.markdown-alert-title) {
+  font-style: normal;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+
+/* 左上角浮起的标签：左移盖住边框，上移 12px 探出卡片 */
+.markdown-alert .markdown-alert-title {
+  display: table;
+  margin: -13px 0 14px -23px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  background: #e4e5eb;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  color: #5b6072;
+}
+.markdown-alert .markdown-alert-title svg {
+  display: none;
+}
+
+/* 绿色：定义 */
+blockquote.markdown-alert-definition,
+blockquote.markdown-alert-axiom {
+  border-left-color: #2f6b3b;
+  background-color: #f2f7f1;
+  background-image:
+    linear-gradient(to bottom right, #f2f7f1 30%, rgba(242, 247, 241, 0) 100%),
+    linear-gradient(rgba(47, 107, 59, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 107, 59, 0.11) 1px, transparent 1px);
+}
+.markdown-alert-definition .markdown-alert-title,
+.markdown-alert-axiom .markdown-alert-title {
+  background: #dbeada;
+  color: #2f7d3a;
+}
+
+/* 蓝色：定理 */
+blockquote.markdown-alert-theorem,
+blockquote.markdown-alert-lemma,
+blockquote.markdown-alert-corollary,
+blockquote.markdown-alert-proposition {
+  border-left-color: #3557a1;
+  background-color: #f1f4fa;
+  background-image:
+    linear-gradient(to bottom right, #f1f4fa 30%, rgba(241, 244, 250, 0) 100%),
+    linear-gradient(rgba(53, 87, 161, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53, 87, 161, 0.11) 1px, transparent 1px);
+}
+.markdown-alert-theorem .markdown-alert-title,
+.markdown-alert-lemma .markdown-alert-title,
+.markdown-alert-corollary .markdown-alert-title,
+.markdown-alert-proposition .markdown-alert-title {
+  background: #dde5f3;
+  color: #3557a1;
+}
+
+/* 交叉引用 */
+.markup-underline {
+  text-decoration: none;
+  border-bottom: 1px dotted #a8842a;
+  white-space: nowrap;
+  color: #a8842a;
+}
