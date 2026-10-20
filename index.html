@@ -298,9 +298,12 @@ const rules = [...document.getElementById('theme').sheet.cssRules]
 const src = document.getElementById('src'), view = document.getElementById('view')
 
 // 计数器：按一级标题分组，所有卡片共享一个序列，证明不占号
-function numbering() {
+// 没有一级标题的稿子保留手写编号；正文 ++…++ 里的旧编号换成新编号
+function numbering(root = view) {
+  if (!root.querySelector(':scope > h1')) return
   let sec = 0, cnt = 0
-  for (const el of view.children) {
+  const map = {}
+  for (const el of root.children) {
     if (el.tagName === 'H1') {
       sec++; cnt = 0
       const em = el.querySelector('em')
@@ -314,12 +317,18 @@ function numbering() {
     const t = el.querySelector('.markdown-alert-title')
     if (!t) continue
     const s = t.querySelector('strong') || t
+    const num = (sec || 1) + '.' + cnt
+    const old = /\d+\s*[.．]\s*\d+/.exec(s.textContent)
+    if (old) map[old[0]] ??= num
     const raw = s.textContent.replace(/\d+\s*[.．]\s*\d+/g, ' ').replace(/\s+/g, ' ').trim()
     const i = raw.search(/[（(]/)
     const head = i < 0 ? raw : raw.slice(0, i).trim()
     const tail = i < 0 ? '' : raw.slice(i)
-    s.textContent = head + ' ' + (sec || 1) + '.' + cnt + tail
+    s.textContent = head + ' ' + num + tail
   }
+  root.querySelectorAll('.markup-underline').forEach(u => {
+    for (const n of u.childNodes) if (n.nodeType === 3) n.data = n.data.replace(/\d+\s*[.．]\s*\d+/g, k => map[k] || k)
+  })
 }
 
 // 一级标题内部拆成三段 inline-block：左图标 / 居中标题 / 右图标。
@@ -329,7 +338,7 @@ function layoutHeadings() {
   const CELL = 'display:inline-block;vertical-align:middle;'
   view.querySelectorAll('h1').forEach(h => {
     const c = h.cloneNode(true)
-    const found = [...c.querySelectorAll('svg')]
+    const found = [...c.querySelectorAll(':scope > svg')]   // 公式的 svg 包在 span 里，不算图标
     found.forEach(s => s.remove())
     const L = found[0] ? found[0].outerHTML.replace(/ style="[^"]*"/, '') : WHEEL
     const R = found[1] ? found[1].outerHTML.replace(/ style="[^"]*"/, '') : WHEEL
@@ -401,7 +410,14 @@ function zhihu() {
     if (m.dataset.display) { const p = body.ownerDocument.createElement('p'); p.append(img); m.replaceWith(p) }
     else m.replaceWith(img)
   })
-  body.querySelectorAll('h2 em').forEach(e => e.replaceWith(e.textContent))
+  numbering(body)
+  // 知乎不认 section，卡片换回引用块
+  body.querySelectorAll('section.markdown-alert').forEach(s => {
+    const q = body.ownerDocument.createElement('blockquote')
+    q.append(...s.childNodes)
+    s.replaceWith(q)
+  })
+  body.querySelectorAll('h1 em, h2 em').forEach(e => e.replaceWith(e.textContent))
   return body.innerHTML
 }
 
@@ -420,7 +436,8 @@ function copy(html, label) {
 // 旧稿 → 本编辑器语法
 // 旧稿（markdown-writing-style）：定理/定义等写成 「> **定理** 正文」引用块，
 // 块内行间公式独占一行（可能写成 ">$$…$$"），证明是块外普通正文、以 $\square$ 收尾，
-// 标题用 #/##/### 且不带编号。
+// 标题用 #/##/### 且不带编号，原样保留。
+// 没有可转换的块时原文返回，所以对 ::: 稿子是空操作。
 function convertLegacy(text) {
   const KIND = {
     定理: 'theorem', 命题: 'proposition', 引理: 'lemma', 推论: 'corollary',
@@ -430,22 +447,10 @@ function convertLegacy(text) {
   }
   const lines = text.replace(/\r\n?/g, '\n').split('\n')
   const out = []
-  let i = 0, sec = 0, sub = 0
+  let i = 0, hits = 0
 
   while (i < lines.length) {
     const line = lines[i]
-
-    const hm = /^(#{1,6})[ \t]+(.*)$/.exec(line)
-    if (hm) {
-      const lv = hm[1].length
-      const title = hm[2].replace(/^\*[\d.]+\*[ \t]*/, '').trim()
-      if (lv === 1) { sec++; sub = 0; out.push('# ' + title) }
-      else if (lv === 2) { sub++; out.push('## ' + title) }
-      else out.push(hm[1] + ' ' + title)
-      out.push('')
-      i++
-      continue
-    }
 
     if (/^>/.test(line)) {
       const raw = [], buf = []
@@ -490,6 +495,7 @@ function convertLegacy(text) {
       }
       const isProof = /证明$/.test(key)
       if (isProof || (key && KIND[key])) {
+        hits++
         out.push(':::' + (isProof ? 'proof' : KIND[key]) + ' ' + key + sub)
         if (rest) out.push(rest)
         for (const b of buf.slice(1)) out.push(b)
@@ -503,6 +509,7 @@ function convertLegacy(text) {
 
     const pm = /^\*\*([^*]*证明)[：:]?\*\*[ \t]*(.*)$/.exec(line)
     if (pm) {
+      hits++
       out.push(':::proof ' + pm[1].trim())
       const first = pm[2].trim()
       if (first) out.push(first)
@@ -524,6 +531,7 @@ function convertLegacy(text) {
     i++
   }
 
+  if (!hits) return text
   const res = []
   for (const l of out) if (!(l === '' && res[res.length - 1] === '')) res.push(l)
   return res.join('\n').trim() + '\n'
@@ -533,8 +541,10 @@ document.getElementById('conv').onclick = () => {
   const before = src.value
   const after = convertLegacy(before)
   src.value = after
+  try { localStorage.setItem('draft', after) } catch {}
   render()
-  const n = (after.match(/^:::/gm) || []).length / 2
+  const blocks = s => (s.match(/^:::/gm) || []).length / 2
+  const n = blocks(after) - blocks(before)
   document.getElementById('msg').textContent =
     before === after ? '没有可转换的旧稿结构' : '已转换 ' + n + ' 个块'
 }
